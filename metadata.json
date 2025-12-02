@@ -1,0 +1,5 @@
+{
+  "name": "HoopsAI - Smart Video Agent",
+  "description": "An intelligent agent for basketball video understanding, automated clipping, effects, and AI commentary generation using Gemini 2.5 Flash and TTS.",
+  "requestFramePermissions": []
+}
