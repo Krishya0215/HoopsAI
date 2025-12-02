@@ -1,5 +1,5 @@
 {
-  "name": "HoopsAI - Smart Video Agent",
-  "description": "An intelligent agent for basketball video understanding, automated clipping, effects, and AI commentary generation using Gemini 2.5 Flash and TTS.",
+  "name": "HoopsAI - 篮球智能助手",
+  "description": "一个基于 Gemini 2.5 的智能篮球视频代理系统，具备视频理解、自动剪辑、特效处理和 AI 解说生成功能。",
   "requestFramePermissions": []
 }

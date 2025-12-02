@@ -1,4 +1,4 @@
-import { GoogleGenAI, Type, Modality } from "@google/genai";
+import { GoogleGenAI, Type, Modality, Chat } from "@google/genai";
 import { VideoEvent } from "../types";
 
 // Helper to get base64 from file
@@ -20,17 +20,17 @@ export const analyzeBasketballVideo = async (base64Video: string, mimeType: stri
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   
   const systemPrompt = `
-    You are an expert basketball video analyst. 
-    Analyze the provided video footage. 
-    Identify specific basketball events such as Dunks, 3-Pointers, Steals, Blocks, and Assists.
-    Return a strict JSON array where each object has:
-    - type: The type of event (DUNK, 3POINT, STEAL, BLOCK, ASSIST, HIGHLIGHT, OTHER)
-    - startTime: Start time in seconds (number)
-    - endTime: End time in seconds (number)
-    - description: A short, exciting description of what happened.
-    - confidence: A number between 0 and 1.
+    你是一位专业的篮球视频分析师。
+    分析提供的视频片段。
+    识别具体的篮球事件，例如扣篮 (DUNK)、三分球 (3POINT)、抢断 (STEAL)、盖帽 (BLOCK) 和助攻 (ASSIST)。
+    返回一个严格的 JSON 数组，每个对象包含：
+    - type: 事件类型 (DUNK, 3POINT, STEAL, BLOCK, ASSIST, HIGHLIGHT, OTHER)
+    - startTime: 开始时间（秒，数字）
+    - endTime: 结束时间（秒，数字）
+    - description: 对发生的事情进行简短、激动人心的中文描述。
+    - confidence: 0 到 1 之间的数字。
     
-    Focus on the most exciting moments. Merge adjacent events if they are part of the same play.
+    重点关注最精彩的时刻。如果是同一个回合，请合并相邻的事件。
   `;
 
   try {
@@ -39,7 +39,7 @@ export const analyzeBasketballVideo = async (base64Video: string, mimeType: stri
       contents: {
         parts: [
           { inlineData: { mimeType: mimeType, data: base64Video } },
-          { text: "Analyze this basketball video and extract highlights." }
+          { text: "分析这段篮球视频并提取精彩集锦。" }
         ]
       },
       config: {
@@ -74,12 +74,12 @@ export const generateCommentaryScript = async (events: VideoEvent[]): Promise<st
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   
   const prompt = `
-    Here is a list of events from a basketball game:
+    以下是一场篮球比赛的事件列表：
     ${JSON.stringify(events)}
 
-    Write a high-energy, play-by-play sportscaster script summarizing these highlights. 
-    Keep it punchy, enthusiastic, and under 100 words. 
-    Focus on the "DUNK" and "3POINT" plays.
+    请用中文写一段充满激情、类似电视解说员的逐个回合解说词，总结这些精彩时刻。
+    保持简练、热情，字数控制在 100 字以内。
+    重点突出 "DUNK"（扣篮）和 "3POINT"（三分）等得分时刻。
   `;
 
   const response = await ai.models.generateContent({
@@ -87,7 +87,7 @@ export const generateCommentaryScript = async (events: VideoEvent[]): Promise<st
     contents: prompt,
   });
 
-  return response.text || "No commentary generated.";
+  return response.text || "无法生成解说。";
 };
 
 export const generateAudioCommentary = async (text: string): Promise<string | undefined> => {
@@ -112,4 +112,15 @@ export const generateAudioCommentary = async (text: string): Promise<string | un
     console.error("TTS Error:", error);
     return undefined;
   }
+};
+
+// Chat Functionality
+export const createChatSession = (): Chat => {
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  return ai.chats.create({
+    model: 'gemini-2.5-flash',
+    config: {
+      systemInstruction: '你是一个乐于助人的篮球 AI 助手。你可以回答关于用户上传视频的问题（当提供上下文时）或者一般的篮球知识。用中文回答，风格要专业且风趣。',
+    }
+  });
 };

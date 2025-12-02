@@ -1,13 +1,15 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { AgentMessage } from '../types';
 
 interface AgentChatProps {
   messages: AgentMessage[];
   isProcessing: boolean;
+  onSendMessage: (text: string) => void;
 }
 
-export const AgentChat: React.FC<AgentChatProps> = ({ messages, isProcessing }) => {
+export const AgentChat: React.FC<AgentChatProps> = ({ messages, isProcessing, onSendMessage }) => {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const [inputText, setInputText] = useState('');
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -15,9 +17,16 @@ export const AgentChat: React.FC<AgentChatProps> = ({ messages, isProcessing }) 
     }
   }, [messages, isProcessing]);
 
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!inputText.trim() || isProcessing) return;
+    onSendMessage(inputText);
+    setInputText('');
+  };
+
   return (
     <div className="flex flex-col h-full bg-slate-900 border-l border-slate-800">
-      <div className="p-4 border-b border-slate-800">
+      <div className="p-4 border-b border-slate-800 bg-slate-900/50 backdrop-blur-sm">
         <h2 className="text-xl font-sport text-orange-500 uppercase tracking-wider flex items-center gap-2">
           <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
@@ -58,9 +67,29 @@ export const AgentChat: React.FC<AgentChatProps> = ({ messages, isProcessing }) 
         )}
       </div>
 
-      <div className="p-4 border-t border-slate-800">
-         <div className="text-xs text-slate-500 text-center">
-            Agent analyzes visuals, creates clips & commentary.
+      {/* Input Area */}
+      <div className="p-3 border-t border-slate-800 bg-slate-900">
+         <form onSubmit={handleSubmit} className="flex gap-2">
+           <input
+             type="text"
+             value={inputText}
+             onChange={(e) => setInputText(e.target.value)}
+             placeholder="询问关于视频的内容..."
+             className="flex-1 bg-slate-800 border border-slate-700 text-white text-sm rounded-full px-4 py-2 focus:outline-none focus:border-orange-500 placeholder-slate-500 transition-colors"
+             disabled={isProcessing}
+           />
+           <button 
+             type="submit"
+             disabled={!inputText.trim() || isProcessing}
+             className="bg-orange-600 hover:bg-orange-500 disabled:opacity-50 disabled:cursor-not-allowed text-white p-2 rounded-full transition-colors flex items-center justify-center w-10 h-10 shadow-lg"
+           >
+             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 transform rotate-90" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+             </svg>
+           </button>
+         </form>
+         <div className="text-[10px] text-slate-500 text-center mt-2">
+            Agent 可分析视觉画面并进行对话
          </div>
       </div>
     </div>
