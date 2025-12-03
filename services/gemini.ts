@@ -23,7 +23,8 @@ export const analyzeBasketballVideo = async (base64Video: string, mimeType: stri
     你是一位专业的篮球视频分析师。
     分析提供的视频片段。
     识别具体的篮球事件，例如扣篮 (DUNK)、三分球 (3POINT)、抢断 (STEAL)、盖帽 (BLOCK) 和助攻 (ASSIST)。
-    返回一个严格的 JSON 数组，每个对象包含：
+    
+    返回 JSON 对象，包含 'events' 数组。每个事件包含：
     - type: 事件类型 (DUNK, 3POINT, STEAL, BLOCK, ASSIST, HIGHLIGHT, OTHER)
     - startTime: 开始时间（秒，数字）
     - endTime: 结束时间（秒，数字）
@@ -32,6 +33,27 @@ export const analyzeBasketballVideo = async (base64Video: string, mimeType: stri
     
     重点关注最精彩的时刻。如果是同一个回合，请合并相邻的事件。
   `;
+
+  // Define schema wrapped in an object for better stability
+  const responseSchema = {
+    type: Type.OBJECT,
+    properties: {
+      events: {
+        type: Type.ARRAY,
+        items: {
+          type: Type.OBJECT,
+          properties: {
+            type: { type: Type.STRING },
+            startTime: { type: Type.NUMBER },
+            endTime: { type: Type.NUMBER },
+            description: { type: Type.STRING },
+            confidence: { type: Type.NUMBER }
+          },
+          required: ["type", "startTime", "endTime", "description"]
+        }
+      }
+    }
+  };
 
   try {
     const response = await ai.models.generateContent({
@@ -45,25 +67,16 @@ export const analyzeBasketballVideo = async (base64Video: string, mimeType: stri
       config: {
         systemInstruction: systemPrompt,
         responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.ARRAY,
-          items: {
-            type: Type.OBJECT,
-            properties: {
-              type: { type: Type.STRING },
-              startTime: { type: Type.NUMBER },
-              endTime: { type: Type.NUMBER },
-              description: { type: Type.STRING },
-              confidence: { type: Type.NUMBER }
-            },
-            required: ["type", "startTime", "endTime", "description"]
-          }
-        }
+        responseSchema: responseSchema
       }
     });
 
-    const jsonText = response.text || "[]";
-    return JSON.parse(jsonText);
+    // Clean up response text in case it contains markdown code blocks
+    let jsonText = response.text || "{}";
+    jsonText = jsonText.replace(/```json\n?|```/g, '');
+    
+    const json = JSON.parse(jsonText);
+    return json.events || [];
   } catch (error) {
     console.error("Error analyzing video:", error);
     throw error;

@@ -61,8 +61,9 @@ export default function App() {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    if (file.size > 20 * 1024 * 1024) {
-      alert("请上传小于 20MB 的视频以进行浏览器演示。");
+    // Limit set to 10MB to be safe with Gemini API inline data limits (approx 20MB payload)
+    if (file.size > 10 * 1024 * 1024) {
+      alert("为了确保 AI 分析稳定，请上传小于 10MB 的视频片段。");
       return;
     }
 
@@ -126,8 +127,8 @@ export default function App() {
 
       addMessage('agent', `分析完成！我发现了：${summary}。你可以点击时间轴跳转到精彩时刻。`);
     } catch (error) {
-      console.error(error);
-      addMessage('agent', '抱歉，分析视频时出错。请尝试较短的片段。');
+      console.error("Analysis failed:", error);
+      addMessage('agent', '抱歉，分析视频时出错。这可能是因为视频过长或格式不支持，请尝试较短的片段（建议 1 分钟以内）。');
     } finally {
       setIsProcessing(false);
     }
@@ -205,11 +206,6 @@ export default function App() {
     const video = videoRef.current;
     const originalTime = video.currentTime;
     const originalMuted = video.muted;
-    const originalFilter = video.style.filter;
-
-    // Apply current filter to canvas logic (simplified here to capture element stream)
-    // Note: To capture CSS filters, we need to draw to canvas manually or use captureStream on video but CSS filters on video element might not be captured by captureStream directly in all browsers.
-    // For reliability in this demo, we will record the video element stream and mix audio.
     
     try {
         const stream = (video as any).captureStream ? (video as any).captureStream() : (video as any).mozCaptureStream();
@@ -222,6 +218,7 @@ export default function App() {
         audioSource.connect(dest);
         
         // Add Audio track to Video Stream
+        // Using only TTS audio for the highlight reel
         const combinedStream = new MediaStream([
             ...stream.getVideoTracks(),
             ...dest.stream.getAudioTracks()
@@ -252,21 +249,12 @@ export default function App() {
         };
 
         // Start Recording Procedure
-        video.muted = true; // Mute video element so we don't hear double audio (we hear generated audio if we connected it to destination AND speakers, but here just destination)
-        // Note: We need to connect audioSource to ctx.destination ALSO if we want the user to hear it while recording, 
-        // but let's keep it silent or minimal to ensure performance.
+        video.muted = true; // Mute locally to avoid feedback, captureStream tracks should still work for visual
         
         mediaRecorder.start();
         audioSource.start(0);
 
         // Sequence Playback Logic for Highlights
-        // For this demo, to keep synchronization simple, we will play the whole relevant range or jump cuts.
-        // Implementing precise jump-cut recording in real-time is complex due to buffering.
-        // We will play the clips sequentially.
-        
-        // Simplified approach: Record the playback of the FIRST clip to LAST clip range, or just play ranges.
-        // Let's iterate through events.
-        
         const playNextClip = async (index: number) => {
             if (index >= events.length) {
                 mediaRecorder.stop();
@@ -275,7 +263,12 @@ export default function App() {
 
             const evt = events[index];
             video.currentTime = evt.startTime;
-            await video.play();
+            
+            try {
+              await video.play();
+            } catch (e) {
+              console.error("Autoplay failed during export", e);
+            }
 
             const checkTime = () => {
                 if (video.currentTime >= evt.endTime) {
@@ -288,9 +281,6 @@ export default function App() {
             video.addEventListener('timeupdate', checkTime);
         };
 
-        // Start the sequence
-        // NOTE: Ideally we match audio duration to video duration. 
-        // Here we just play audio over the video clips.
         await playNextClip(0);
 
     } catch (e) {
@@ -331,6 +321,7 @@ export default function App() {
                 accept="video/*" 
                 onChange={handleFileUpload}
             />
+            <p className="text-[10px] text-slate-500 text-center">建议上传 10MB 以内的 MP4 文件</p>
         </div>
 
         <div className="space-y-4">
