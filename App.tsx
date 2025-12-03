@@ -137,6 +137,14 @@ export default function App() {
   const handleGenerateCommentary = async () => {
     if (events.length === 0) return;
 
+    // Initialize/Resume AudioContext immediately to satisfy browser autoplay policies
+    if (!audioContextRef.current) {
+      audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
+    }
+    if (audioContextRef.current.state === 'suspended') {
+      await audioContextRef.current.resume();
+    }
+
     setIsProcessing(true);
     addMessage('user', '生成 AI 解说。');
     addMessage('agent', '正在撰写解说词并合成语音...');
@@ -150,10 +158,6 @@ export default function App() {
       const audioBase64 = await generateAudioCommentary(script);
       
       if (audioBase64) {
-        // Prepare Buffer for playback and export
-        if (!audioContextRef.current) {
-            audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
-        }
         const ctx = audioContextRef.current;
         const audioBytes = decode(audioBase64);
         const buffer = await decodeAudioData(audioBytes, ctx, 24000, 1);
@@ -173,10 +177,14 @@ export default function App() {
     }
   };
 
-  const playAudioBuffer = (buffer: AudioBuffer) => {
+  const playAudioBuffer = async (buffer: AudioBuffer) => {
     if (!audioContextRef.current) return;
     const ctx = audioContextRef.current;
-    if (ctx.state === 'suspended') ctx.resume();
+    
+    // Ensure context is running
+    if (ctx.state === 'suspended') {
+      await ctx.resume();
+    }
 
     const source = ctx.createBufferSource();
     source.buffer = buffer;

@@ -1,5 +1,5 @@
 export function decode(base64: string): Uint8Array {
-  const binaryString = atob(base64);
+  const binaryString = atob(base64.replace(/\s/g, ''));
   const len = binaryString.length;
   const bytes = new Uint8Array(len);
   for (let i = 0; i < len; i++) {
@@ -14,7 +14,13 @@ export async function decodeAudioData(
   sampleRate: number = 24000,
   numChannels: number = 1,
 ): Promise<AudioBuffer> {
-  const dataInt16 = new Int16Array(data.buffer);
+  // Ensure data length is even for Int16Array
+  let processData = data;
+  if (data.length % 2 !== 0) {
+      processData = data.subarray(0, data.length - 1);
+  }
+
+  const dataInt16 = new Int16Array(processData.buffer, processData.byteOffset, processData.length / 2);
   const frameCount = dataInt16.length / numChannels;
   const buffer = ctx.createBuffer(numChannels, frameCount, sampleRate);
 
